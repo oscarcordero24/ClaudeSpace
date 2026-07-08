@@ -5,8 +5,8 @@ Center Data Storage System used by HEC-HMS, HEC-RAS, HEC-ResSim, and other
 USACE tools).
 
 It wraps the official [`hecdss`](https://pypi.org/project/hecdss/) library
-published by the U.S. Army Corps of Engineers and gives you a clean API and a
-command-line tool to:
+published by the U.S. Army Corps of Engineers and gives you a clean API, a
+command-line tool, and a small desktop GUI to:
 
 - open a `.dss` file,
 - list its catalog of record pathnames, and
@@ -20,6 +20,7 @@ command-line tool to:
 │   ├── __init__.py       # package exports
 │   ├── reader.py         # DssReader / DssRecord — the core API
 │   ├── cli.py            # command-line interface
+│   ├── gui.py            # Tkinter desktop GUI
 │   └── __main__.py       # enables `python -m hec_dss_reader`
 ├── tests/
 │   └── test_reader.py    # unit tests (run with a fake backend)
@@ -48,6 +49,30 @@ pip install -e .
 > [hecdss project page](https://pypi.org/project/hecdss/) for build options.
 
 ## Usage
+
+### Desktop GUI (Tkinter)
+
+```bash
+python -m hec_dss_reader.gui
+# or, if installed:  hec-dss-reader-gui
+```
+
+The window provides:
+
+- an **Open DSS File...** button that opens a file browser,
+- a **Record** dropdown listing the pathnames in the file,
+- **Start** / **End** date pickers (a pop-up calendar when
+  [`tkcalendar`](https://pypi.org/project/tkcalendar/) is installed, otherwise
+  a `YYYY-MM-DD` text box), and
+- a **results table** that shows the time/value pairs falling within the
+  chosen date range.
+
+Tkinter ships with most Python installs. For the calendar pickers, install the
+optional extra:
+
+```bash
+pip install -e ".[gui]"    # or: pip install tkcalendar
+```
 
 ### Command line
 

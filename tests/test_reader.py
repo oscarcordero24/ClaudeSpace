@@ -5,9 +5,11 @@ fake DSS backend, so they run without a real .dss file or the native
 ``hecdss`` dependency installed.
 """
 
+from datetime import date, datetime
+
 import pytest
 
-from hec_dss_reader.reader import DssReader, DssRecord
+from hec_dss_reader.reader import DssReader, DssRecord, _coerce_datetime
 
 
 class FakeTimeSeries:
@@ -94,6 +96,53 @@ def test_requires_open():
     reader = DssReader("fake.dss")
     with pytest.raises(RuntimeError):
         reader.catalog()
+
+
+def test_coerce_datetime_formats():
+    assert _coerce_datetime(datetime(2020, 1, 2, 3, 4)) == datetime(2020, 1, 2, 3, 4)
+    assert _coerce_datetime(date(2020, 1, 2)) == datetime(2020, 1, 2)
+    assert _coerce_datetime("2020-01-02") == datetime(2020, 1, 2)
+    assert _coerce_datetime("2020-01-02 03:04:05") == datetime(2020, 1, 2, 3, 4, 5)
+    assert _coerce_datetime("") is None
+    assert _coerce_datetime("not-a-date") is None
+
+
+def test_rows_filters_by_date_range():
+    rec = DssRecord(
+        pathname="/A/B/FLOW//1DAY/OBS/",
+        record_type="RegularTimeSeries",
+        values=[1.0, 2.0, 3.0, 4.0],
+        times=[
+            datetime(2020, 1, 1),
+            datetime(2020, 1, 2),
+            datetime(2020, 1, 3),
+            datetime(2020, 1, 4),
+        ],
+        units="cfs",
+    )
+    rows = rec.rows(start=date(2020, 1, 2), end=date(2020, 1, 3))
+    assert [v for _, v in rows] == [2.0, 3.0]
+
+
+def test_rows_without_bounds_returns_all():
+    rec = DssRecord(
+        pathname="/A/B/C/",
+        record_type="ts",
+        values=[10.0, 20.0],
+        times=[datetime(2021, 5, 1), datetime(2021, 6, 1)],
+    )
+    assert len(rec.rows()) == 2
+
+
+def test_rows_without_times_are_not_filtered():
+    rec = DssRecord(
+        pathname="/A/B/STAGE-FLOW///PAIRED/",
+        record_type="PairedData",
+        values=[100.0, 200.0],
+        times=[],
+    )
+    rows = rec.rows(start=date(2020, 1, 1), end=date(2020, 12, 31))
+    assert [v for _, v in rows] == [100.0, 200.0]
 
 
 def test_close_closes_backend():

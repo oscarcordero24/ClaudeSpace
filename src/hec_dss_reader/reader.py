@@ -11,7 +11,42 @@ from __future__ import annotations
 
 from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
-from typing import Any, Iterator, List, Optional
+from datetime import date, datetime
+from typing import Any, Iterator, List, Optional, Tuple
+
+
+def _coerce_datetime(value: Any) -> Optional[datetime]:
+    """Best-effort conversion of a DSS time stamp into a ``datetime``.
+
+    Handles ``datetime``/``date`` objects and a few common string formats.
+    Returns ``None`` when the value can't be interpreted as a time.
+    """
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, date):
+        return datetime(value.year, value.month, value.day)
+    text = str(value).strip()
+    if not text:
+        return None
+    for fmt in (
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%d",
+        "%d%b%Y %H:%M:%S",
+        "%d%b%Y:%H%M",
+        "%d %b %Y",
+    ):
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        return None
 
 
 @dataclass
@@ -46,6 +81,37 @@ class DssRecord:
             f"{self.pathname}  ({self.record_type}, "
             f"{len(self.values)} values{unit})"
         )
+
+    def rows(
+        self,
+        start: Optional[date] = None,
+        end: Optional[date] = None,
+    ) -> List[Tuple[Any, Any]]:
+        """Return ``(time, value)`` pairs, optionally filtered by date range.
+
+        ``start`` and ``end`` may be ``date`` or ``datetime`` objects. A pair is
+        kept when its (coerced) time stamp falls on/after ``start`` and
+        on/before ``end``; either bound may be omitted. Records without usable
+        time stamps (e.g. paired data) are returned unfiltered, pairing each
+        value with its raw time entry (or index when there are no times).
+        """
+        start_dt = _coerce_datetime(start) if start is not None else None
+        end_dt = _coerce_datetime(end) if end is not None else None
+
+        pairs: List[Tuple[Any, Any]] = []
+        for i, value in enumerate(self.values):
+            stamp = self.times[i] if i < len(self.times) else None
+            ts = _coerce_datetime(stamp)
+            if ts is not None:
+                if start_dt is not None and ts < start_dt:
+                    continue
+                if end_dt is not None and ts > end_dt:
+                    continue
+                pairs.append((stamp, value))
+            else:
+                # No usable time stamp: keep the value, don't date-filter it.
+                pairs.append((stamp if stamp is not None else i, value))
+        return pairs
 
 
 class DssReader(AbstractContextManager):

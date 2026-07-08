@@ -1,5 +1,9 @@
 # Runtime dependencies
 hecdss>=0.1
 
+# GUI: pop-up calendar date pickers (Tkinter itself ships with Python).
+# Optional — the GUI falls back to text date entry if this is missing.
+tkcalendar>=1.6
+
 # Development / testing (install with: pip install -r requirements.txt)
 pytest>=7.0

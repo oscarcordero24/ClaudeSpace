@@ -14,12 +14,19 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+gui = [
+    "tkcalendar>=1.6",
+]
 dev = [
     "pytest>=7.0",
+    "tkcalendar>=1.6",
 ]
 
 [project.scripts]
 hec-dss-reader = "hec_dss_reader.cli:main"
+
+[project.gui-scripts]
+hec-dss-reader-gui = "hec_dss_reader.gui:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
